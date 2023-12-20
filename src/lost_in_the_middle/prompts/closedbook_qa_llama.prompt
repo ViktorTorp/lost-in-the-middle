@@ -1,0 +1,6 @@
+<s>[INST] <<SYS>>
+Write a high-quality answer for the given question.
+<</SYS>>
+
+Question: {question}
+Answer: [/INST]

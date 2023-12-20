@@ -9,7 +9,7 @@ import sys
 from copy import deepcopy
 import pandas  as pd
 from tqdm import tqdm
-import numpy as np
+from sklearn.model_selection import KFold
 from xopen import xopen
 import sys
 sys.path.append('./src')
@@ -31,43 +31,31 @@ def main(
     all_examples = []
     with xopen(input_path) as fin:
         for line in tqdm(fin):
-            try:
-                input_example = json.loads(line)
-                all_examples.append(input_example)
-            except:
-                logger.warning(f"Failed to load line")
+            input_example = json.loads(line)
+            all_examples.append(input_example)
 
     # Compute normal metrics in parallel, if applicable
     logger.info("Computing metrics")
     all_example_metrics = []
     for example in tqdm(all_examples):
         all_example_metrics.append(get_metrics_for_example(example))
-    print("number of", len(all_examples))
-    scores = [example_metrics["best_subspan_em"] for (example_metrics, _) in all_example_metrics]
-    print([example_metrics["best_subspan_em"] for (example_metrics, _) in all_example_metrics])
-    print(np.mean(scores), np.sum(scores))
+
+    kf = KFold(n_splits=10, shuffle=True, random_state=42)
     # Average metrics across examples
     for (_, metric_name) in METRICS:
-        average_metric_value = statistics.mean(
-            example_metrics[metric_name] for (example_metrics, _) in all_example_metrics
-        )
-        logger.info(f"{metric_name}: {average_metric_value}")
-        if len(position_csv) > 0:
-            if int(position_idx) == 0:
-                res_df = pd.DataFrame(columns=['position', 'metric'])
-            else:
-                res_df = pd.read_csv(position_csv)
-            res_df.loc[len(res_df)] = [position_idx, average_metric_value]
-            res_df.to_csv(position_csv, index=False)
-
-
-    if output_path:
-        with xopen(output_path, "w") as f:
-            for (example_metrics, example) in all_example_metrics:
-                example_with_metrics = deepcopy(example)
-                for metric_name, metric_value in example_metrics.items():
-                    example_with_metrics[f"metric_{metric_name}"] = metric_value
-                f.write(json.dumps(example_with_metrics) + "\n")
+        for fold, (train_index, test_index) in enumerate(kf.split(all_example_metrics)):
+            train_metrics = [all_example_metrics[i][0][metric_name] for i in train_index]
+            average_metric_value = statistics.mean(train_metrics
+            )
+            logger.info(f"{metric_name} at fold {fold} : {average_metric_value}")
+            if len(position_csv) > 0:
+                if (int(position_idx) == 0 and fold == 0):
+                    print(position_idx, fold)
+                    res_df = pd.DataFrame(columns=['position', 'fold', 'metric'])
+                else:
+                    res_df = pd.read_csv(position_csv)
+                res_df.loc[len(res_df)] = [position_idx, fold, average_metric_value]
+                res_df.to_csv(position_csv, index=False)
 
 
 def get_metrics_for_example(example):
@@ -79,7 +67,7 @@ def get_metrics_for_example(example):
     # NOTE: we take everything up to the first newline, since otherwise models could hack
     # the metric by simply copying te input context (as the gold answer is guaranteed
     # to occur in the input context).
-    # model_answer = model_answer.split("\n")[0].strip()
+    model_answer = model_answer.split("\n")[0].strip()
 
     example_metrics = {}
     for (metric, metric_name) in METRICS:

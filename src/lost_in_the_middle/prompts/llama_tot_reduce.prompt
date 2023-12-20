@@ -1,0 +1,7 @@
+<s>[INST] <<SYS>>
+Extract the final answer to the question from the experts discussions
+
+<</SYS>>
+
+The question is {question} and the discussion is the following:
+{map_output}[/INST]

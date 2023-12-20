@@ -1,0 +1,6 @@
+The question is {question} and the search results are the following:
+
+{search_results}
+
+Question: {question}
+Final answer:

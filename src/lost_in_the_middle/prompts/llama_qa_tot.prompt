@@ -1,0 +1,14 @@
+<s>[INST] <<SYS>>
+Imagine three different experts are answering this question, using only the provided search results (some of which might be irrelevant).
+All experts will write down 1 step of their thinking,
+then share it with the group.
+Then all experts will go on to the next step, etc.
+If any expert realises they're wrong at any point then they leave.
+In the end they will provide a final answer
+<</SYS>>
+The question is {question} and the search results are the following:
+
+{search_results}
+
+Question: {question}
+Final answer: [/INST]
